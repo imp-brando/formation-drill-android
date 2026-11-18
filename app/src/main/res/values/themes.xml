@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.FormationDrill" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#3b4220</item>
+        <item name="android:statusBarColor">#2a2f15</item>
+        <item name="android:navigationBarColor">#2a2f15</item>
+    </style>
+</resources>
