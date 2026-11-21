@@ -6,3 +6,4 @@ app/src/main/assets/model-en-us/
 app/src/main/assets/www/
 *.keystore
 *.jks
+.kotlin/
