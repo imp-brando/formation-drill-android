@@ -13,10 +13,10 @@ android {
         applicationId = "io.github.impbrando.formationdrill"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
         // Where the game is loaded from (edits go live without an app update)
-        buildConfigField("String", "GAME_URL", "\"https://imp-brando.github.io/formation-drill/\"")
+        buildConfigField("String", "GAME_URL", "\"https://imp-brando.github.io/formation-drill-html/\"")
         // phones: 64- and 32-bit ARM; add the emulator ABI with -Pemulator
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") + (if (project.hasProperty("emulator")) listOf("x86_64") else emptyList()) }
     }
@@ -58,9 +58,21 @@ val fetchModel by tasks.registering {
         File(dir, "uuid").writeText("vosk-model-small-en-us-0.15")
     }
 }
-/* Bundled fallback copy of the game, for a first launch with no signal. */
-val copyGame by tasks.registering(Copy::class) {
-    from(rootProject.layout.projectDirectory.file("../index.html"), rootProject.layout.projectDirectory.file("../sw.js"))
-    into(layout.projectDirectory.dir("src/main/assets/www"))
+/* Bundled fallback copy of the game (for a first launch with no signal): the current build from the
+   HTML repo's Pages site, fetched at build time. Override with -PgameDir=/path/to/formation-drill-html. */
+val gameUrl = "https://imp-brando.github.io/formation-drill-html/"
+val wwwDir = layout.projectDirectory.dir("src/main/assets/www")
+val copyGame by tasks.registering {
+    outputs.dir(wwwDir)
+    outputs.upToDateWhen { false }
+    doLast {
+        val out = wwwDir.asFile; out.mkdirs()
+        val local = project.findProperty("gameDir")?.toString()
+        for (name in listOf("index.html", "sw.js")) {
+            val dst = File(out, name)
+            if (local != null) File(local, name).copyTo(dst, overwrite = true)
+            else URL(gameUrl + name).openStream().use { inp -> dst.outputStream().use { inp.copyTo(it) } }
+        }
+    }
 }
 tasks.named("preBuild") { dependsOn(fetchModel, copyGame) }

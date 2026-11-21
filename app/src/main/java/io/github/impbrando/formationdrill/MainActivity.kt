@@ -26,6 +26,8 @@ class MainActivity : Activity() {
 
     private val fallbackUrl = "https://appassets.androidplatform.net/assets/www/index.html"
     private val trustedHosts = setOf(Uri.parse(BuildConfig.GAME_URL).host, "appassets.androidplatform.net")
+    /** The voice bridge only talks to the game itself: the HTML repo's Pages site or the bundled copy. */
+    private fun isGame(url: String?) = url != null && (url.startsWith(BuildConfig.GAME_URL) || url.startsWith("https://appassets.androidplatform.net/assets/www/"))
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +52,7 @@ class MainActivity : Activity() {
         web.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, req: WebResourceRequest) = loader.shouldInterceptRequest(req.url)
             override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
-                trusted = Uri.parse(url).host in trustedHosts
+                trusted = isGame(url)
             }
             override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
                 if (req.url.host in trustedHosts) return false

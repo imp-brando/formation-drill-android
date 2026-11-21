@@ -1,29 +1,46 @@
-# Formation Drill: Android app (hybrid)
+# Formation Drill: Android app
 
-A thin Kotlin shell around the web game.
+The **Android app** version of Formation Drill, a voice-controlled Drill & Ceremony practice game.
+The browser version is in a separate repo: **https://github.com/imp-brando/formation-drill-html**
+(play it at https://imp-brando.github.io/formation-drill-html/).
 
-- **Game layer:** the same HTML5/JavaScript game, loaded from https://imp-brando.github.io/formation-drill/,
-  so game edits go live without an app update. The page's service worker (`sw.js`) keeps an offline copy,
-  and a copy of `index.html` is bundled in the APK (`assets/www`) for a first launch with no signal.
-- **Voice layer (native):** one `AudioRecord` stream (16 kHz mono, `VOICE_RECOGNITION` source) feeds both
-  - the voice meter (loudness + pitch every 25 ms → `FGN.frame`) used for inflection and voice-burst timing, and
-  - an on-device Vosk recogniser (small English model, Apache-2.0) restricted to the drill-word grammar the
-    game sends (`FGAndroid.setGrammar`), → `FGN.speech(text, isFinal, alts)`.
-  There's no mic handoff, no Chrome session restarts, and it works offline.
-- The game keeps all command logic (sound-alikes, chatter discard, PICAA, voice burst, `!` errors).
-  In a normal browser `window.FGAndroid` doesn't exist and the Chrome speech path is used unchanged.
+## How it works (hybrid)
+
+- **Game:** a thin Kotlin shell (full-screen WebView) loads the game from the HTML repo's Pages site,
+  https://imp-brando.github.io/formation-drill-html/, so game edits go live without an app update.
+  The site's service worker keeps an offline copy, and a copy of the game is bundled in the APK for a
+  first launch with no signal.
+- **Voice (native):** one `AudioRecord` mic stream (16 kHz mono) feeds both
+  - an **on-device Vosk recogniser** (small English model, Apache-2.0) limited to the drill-word grammar
+    the game sends, which works offline, and
+  - a **loudness + pitch meter** (every 25 ms) for inflection and voice-burst execution timing.
+  There's no mic handoff and no Chrome speech engine. All command logic (sound-alikes, chatter discard,
+  PICAA, Cover/Recover, `!` errors) stays in the game; it detects the app through `window.FGAndroid`.
+
+## Install a test build (sideload)
+
+1. On your Android phone (Android 8+), open the latest APK from
+   [Releases](https://github.com/imp-brando/formation-drill-android/releases) **in the Chrome app** and download it.
+2. Open the downloaded file. If asked, allow Chrome to "Install unknown apps", then tap Install
+   (Play Protect may warn about an unknown developer: "Install anyway").
+3. Open Formation Drill with signal the first time, tap Snake or Drill, and allow the microphone
+   when you call FALL IN.
 
 ## Build
 
-Requires JDK 17 and the Android SDK (platform 35). The speech model (~40 MB) is downloaded at build time.
+Requires JDK 17 and the Android SDK (platform 35).
 
-    ./gradlew assembleDebug testDebugUnitTest        # phones (arm64-v8a, armeabi-v7a)
-    ./gradlew assembleDebug -Pemulator                # + x86_64 for the emulator
+    ./gradlew assembleDebug testDebugUnitTest      # phones: arm64-v8a + armeabi-v7a
+    ./gradlew assembleDebug -Pemulator              # + x86_64 for an emulator
+    ./gradlew assembleDebug -PgameDir=../formation-drill-html   # bundle a local game build instead of the live site
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`
+At build time the speech model (~40 MB) is downloaded into `app/src/main/assets/model-en-us/`, and the
+current game (`index.html`, `sw.js`) is fetched from the Pages site into `app/src/main/assets/www/`.
+Output: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Bridge
 
-JS → native (`window.FGAndroid`): `start()`, `stop()`, `setGrammar(jsonArray)`, `version()`.
-Native → JS (`window.FGN`): `frame(db, hz, ageMs)`, `speech(text, isFinal, alts)`, `state(s, detail)`.
-The bridge only answers pages from imp-brando.github.io or the bundled copy.
+- JS → native (`window.FGAndroid`): `start()`, `stop()`, `setGrammar(jsonArray)`, `version()`.
+- Native → JS (`window.FGN`, defined in the HTML repo's `src/part6.js`): `frame(db, hz, ageMs)`,
+  `speech(text, isFinal, alts)`, `state(s, detail)`.
+- The bridge only answers the game's own pages (the Pages URL above or the bundled copy).
